@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบขอหนังสือรับรองสิทธิการรักษา</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Sarabun', sans-serif; background-color: #f3f4f6; }
+    </style>
+</head>
+<body>
+
+<div class="max-w-5xl mx-auto mt-10 p-4">
+    <!-- Header -->
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold text-blue-800">ระบบขอหนังสือรับรองสิทธิการรักษา</h1>
+        <p class="text-gray-600 mt-2">โรงพยาบาล / หน่วยงานของคุณ</p>
+    </div>
+
+    <!-- Main Content Area -->
+    <div id="app-content" class="bg-white p-8 rounded-xl shadow-lg"></div>
+</div>
+
+<script>
+    // การจัดการข้อมูลจำลองด้วย LocalStorage
+    const getRequests = () => JSON.parse(localStorage.getItem('medicalRequests')) || [];
+    const saveRequests = (data) => localStorage.setItem('medicalRequests', JSON.stringify(data));
+
+    // ฟังก์ชันเปลี่ยนหน้าจอ
+    function navigate(page) {
+        const app = document.getElementById('app-content');
+        if (page === 'home') app.innerHTML = renderHome();
+        else if (page === 'new-request') app.innerHTML = renderNewRequest();
+        else if (page === 'check-status') app.innerHTML = renderCheckStatus();
+        else if (page === 'hr-login') app.innerHTML = renderHrLogin();
+        else if (page === 'hr-dashboard') app.innerHTML = renderHrDashboard();
+    }
+
+    // --- หน้าแรก (Home) ---
+    function renderHome() {
+        return `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Card 1 -->
+                <div onclick="navigate('new-request')" class="cursor-pointer border border-blue-100 bg-blue-50 hover:bg-blue-100 p-6 rounded-lg text-center transition">
+                    <div class="text-5xl mb-4">✍️</div>
+                    <h2 class="text-xl font-semibold text-blue-900 mb-2">ขอหนังสือรับรอง</h2>
+                    <h3 class="font-medium text-blue-800">ยื่นคำขอใหม่</h3>
+                    <p class="text-sm text-gray-600 mt-2">กรอกข้อมูลเพื่อยื่นคำขอหนังสือรับรองสิทธิการรักษา สำหรับตนเองหรือบุคคลที่เกี่ยวข้อง</p>
+                </div>
+                <!-- Card 2 -->
+                <div onclick="navigate('check-status')" class="cursor-pointer border border-green-100 bg-green-50 hover:bg-green-100 p-6 rounded-lg text-center transition">
+                    <div class="text-5xl mb-4">🔎</div>
+                    <h2 class="text-xl font-semibold text-green-900 mb-2">ตรวจสอบสถานะคำขอ</h2>
+                    <h3 class="font-medium text-green-800">ค้นหาด้วยชื่อ-สกุล</h3>
+                    <p class="text-sm text-gray-600 mt-2">ติดตามความคืบหน้าคำขอ พิมพ์ชื่อ-สกุลเพื่อค้นหา แล้วดูสถานะล่าสุดได้ทันที</p>
+                </div>
+                <!-- Card 3 -->
+                <div onclick="navigate('hr-login')" class="cursor-pointer border border-purple-100 bg-purple-50 hover:bg-purple-100 p-6 rounded-lg text-center transition">
+                    <div class="text-5xl mb-4">🔐</div>
+                    <h2 class="text-xl font-semibold text-purple-900 mb-2">สำหรับเจ้าหน้าที่ HR</h2>
+                    <h3 class="font-medium text-purple-800">อนุมัติ / พิมพ์ / รายงาน</h3>
+                    <p class="text-sm text-gray-600 mt-2">เข้าสู่ระบบเพื่อจัดการคำขอ ตรวจสอบ อนุมัติ ออกเลขหนังสือ และพิมพ์เอกสารได้ครบ</p>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- หน้า 1: ยื่นคำขอใหม่ ---
+    function renderNewRequest() {
+        return `
+            <div>
+                <button onclick="navigate('home')" class="text-gray-500 hover:text-gray-800 mb-4 flex items-center">← กลับหน้าแรก</button>
+                <h2 class="text-2xl font-bold mb-6 text-blue-800 border-b pb-2">✍️ ยื่นคำขอใหม่</h2>
+                <form id="requestForm" onsubmit="submitRequest(event)" class="space-y-4 max-w-lg">
+                    <div>
+                        <label class="block text-gray-700 mb-1">ชื่อ-นามสกุล (ผู้ป่วย)</label>
+                        <input type="text" id="fullName" required class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-1">ความสัมพันธ์</label>
+                        <select id="relation" class="w-full border border-gray-300 p-2 rounded">
+                            <option value="ตนเอง">ตนเอง</option>
+                            <option value="บุตร">บุตร</option>
+                            <option value="คู่สมรส">คู่สมรส</option>
+                            <option value="บิดา/มารดา">บิดา/มารดา</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 mb-1">เหตุผลที่ขอรับรอง</label>
+                        <textarea id="reason" required class="w-full border border-gray-300 p-2 rounded" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 w-full font-semibold">ส่งคำขอ</button>
+                </form>
+            </div>
+        `;
+    }
+
+    function submitRequest(e) {
+        e.preventDefault();
+        const fullName = document.getElementById('fullName').value;
+        const relation = document.getElementById('relation').value;
+        const reason = document.getElementById('reason').value;
+        
+        const newReq = {
+            id: 'REQ' + Date.now().toString().slice(-6),
+            fullName,
+            relation,
+            reason,
+            status: 'รอดำเนินการ',
+            date: new Date().toLocaleDateString('th-TH')
+        };
+        
+        const requests = getRequests();
+        requests.push(newReq);
+        saveRequests(requests);
+        
+        alert(`ยื่นคำขอสำเร็จ!\nเลขที่อ้างอิงของคุณคือ: ${newReq.id}`);
+        navigate('home');
+    }
+
+    // --- หน้า 2: ตรวจสอบสถานะ ---
+    function renderCheckStatus() {
+        return `
+            <div>
+                <button onclick="navigate('home')" class="text-gray-500 hover:text-gray-800 mb-4 flex items-center">← กลับหน้าแรก</button>
+                <h2 class="text-2xl font-bold mb-6 text-green-800 border-b pb-2">🔎 ตรวจสอบสถานะคำขอ</h2>
+                <div class="flex space-x-2 max-w-lg mb-6">
+                    <input type="text" id="searchName" placeholder="พิมพ์ชื่อ-นามสกุล..." class="w-full border border-gray-300 p-2 rounded focus:outline-none focus:ring-2 focus:ring-green-400">
+                    <button onclick="searchStatus()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">ค้นหา</button>
+                </div>
+                <div id="searchResult"></div>
+            </div>
+        `;
+    }
+
+    function searchStatus() {
+        const query = document.getElementById('searchName').value.trim();
+        const requests = getRequests();
+        const results = requests.filter(r => r.fullName.includes(query));
+        const resDiv = document.getElementById('searchResult');
+        
+        if (!query) { resDiv.innerHTML = '<p class="text-red-500">กรุณาพิมพ์ชื่อ</p>'; return; }
+        if (results.length === 0) { resDiv.innerHTML = '<p class="text-gray-500">ไม่พบข้อมูลคำขอ</p>'; return; }
+
+        let html = '<ul class="space-y-3">';
+        results.forEach(r => {
+            const statusColor = r.status === 'รอดำเนินการ' ? 'bg-yellow-100 text-yellow-800' : 
+                                r.status === 'อนุมัติแล้ว' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+            html += `
+                <li class="border p-4 rounded shadow-sm flex justify-between items-center">
+                    <div>
+                        <p class="font-bold">เลขที่: ${r.id}</p>
+                        <p>ชื่อ: ${r.fullName} (${r.relation})</p>
+                        <p class="text-sm text-gray-500">วันที่ยื่น: ${r.date}</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-sm font-semibold ${statusColor}">${r.status}</span>
+                </li>
+            `;
+        });
+        html += '</ul>';
+        resDiv.innerHTML = html;
+    }
+
+    // --- หน้า 3: เจ้าหน้าที่ HR ---
+    function renderHrLogin() {
+        return `
+            <div class="max-w-md mx-auto text-center">
+                <button onclick="navigate('home')" class="text-gray-500 hover:text-gray-800 mb-4 flex items-center">← กลับหน้าแรก</button>
+                <h2 class="text-2xl font-bold mb-6 text-purple-800">🔐 เข้าสู่ระบบ HR</h2>
+                <div class="space-y-4">
+                    <input type="password" id="hrPassword" placeholder="รหัสผ่าน (พิมพ์ 1234)" class="w-full border border-gray-300 p-2 rounded text-center">
+                    <button onclick="hrLogin()" class="bg-purple-600 text-white px-6 py-2 rounded hover:bg-purple-700 w-full font-semibold">เข้าสู่ระบบ</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function hrLogin() {
+        const pass = document.getElementById('hrPassword').value;
+        if (pass === '1234') { navigate('hr-dashboard'); } 
+        else { alert('รหัสผ่านไม่ถูกต้อง (ลองพิมพ์ 1234)'); }
+    }
+
+    function renderHrDashboard() {
+        const requests = getRequests();
+        let tableRows = '';
+        
+        if (requests.length === 0) {
+            tableRows = '<tr><td colspan="5" class="p-4 text-center text-gray-500">ยังไม่มีคำขอในระบบ</td></tr>';
+        } else {
+            requests.forEach((r, index) => {
+                const actionBtn = r.status === 'รอดำเนินการ' 
+                    ? `<button onclick="approveRequest(${index})" class="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600">อนุมัติ</button>
+                       <button onclick="rejectRequest(${index})" class="text-xs bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600">ปฏิเสธ</button>`
+                    : `<button onclick="printDoc('${r.id}')" class="text-xs bg-gray-600 text-white px-2 py-1 rounded hover:bg-gray-700">พิมพ์เอกสาร</button>`;
+                
+                tableRows += `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">${r.id}</td>
+                        <td class="p-3">${r.fullName}</td>
+                        <td class="p-3">${r.date}</td>
+                        <td class="p-3 font-semibold ${r.status === 'รอดำเนินการ' ? 'text-yellow-600' : (r.status === 'อนุมัติแล้ว' ? 'text-green-600' : 'text-red-600')}">${r.status}</td>
+                        <td class="p-3 space-x-1">${actionBtn}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        return `
+            <div>
+                <div class="flex justify-between items-center mb-6 border-b pb-2">
+                    <h2 class="text-2xl font-bold text-purple-800">จัดการคำขอ (HR Dashboard)</h2>
+                    <button onclick="navigate('home')" class="text-gray-500 hover:text-gray-800">ออกจากระบบ</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100">
+                                <th class="p-3">เลขที่คำขอ</th>
+                                <th class="p-3">ชื่อ-นามสกุล</th>
+                                <th class="p-3">วันที่ยื่น</th>
+                                <th class="p-3">สถานะ</th>
+                                <th class="p-3">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>${tableRows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }
+
+    // ฟังก์ชันจัดการของ HR
+    function approveRequest(index) {
+        const requests = getRequests();
+        requests[index].status = 'อนุมัติแล้ว';
+        saveRequests(requests);
+        navigate('hr-dashboard');
+    }
+
+    function rejectRequest(index) {
+        const requests = getRequests();
+        requests[index].status = 'ไม่อนุมัติ';
+        saveRequests(requests);
+        navigate('hr-dashboard');
+    }
+
+    function printDoc(id) {
+        alert(`กำลังเตรียมพิมพ์เอกสารหนังสือรับรอง เลขที่: ${id}`);
+        window.print();
+    }
+
+    // เริ่มต้นแอปที่หน้าแรก
+    navigate('home');
+</script>
+
+</body>
+</html>
